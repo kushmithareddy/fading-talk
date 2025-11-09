@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { MessageCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MessageCircle, Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
@@ -8,7 +8,9 @@ declare global {
         webhookUrl: string;
         target: string;
         mode: string;
+        initialMessages?: string[];
       }) => void;
+      open?: () => void;
     };
   }
 }
@@ -16,6 +18,8 @@ declare global {
 export const ChatRoom = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load n8n chat script
@@ -23,16 +27,36 @@ export const ChatRoom = () => {
       const script = document.createElement("script");
       script.src = "https://cdn.jsdelivr.net/npm/@n8n/chat@latest";
       script.async = true;
+      
       script.onload = () => {
-        // Initialize chat once script is loaded
-        if (window.n8nChat && chatContainerRef.current) {
-          window.n8nChat.init({
-            webhookUrl: "https://saitejareddy.app.n8n.cloud/webhook/798b5980-d87e-4b1b-90dd-71d239d05faa/chat",
-            target: "#n8n-chat",
-            mode: "embedded"
-          });
-        }
+        // Wait a bit for the script to be ready
+        setTimeout(() => {
+          try {
+            if (window.n8nChat && chatContainerRef.current) {
+              window.n8nChat.init({
+                webhookUrl: "https://saitejareddy.app.n8n.cloud/webhook/798b5980-d87e-4b1b-90dd-71d239d05faa/chat",
+                target: "#n8n-chat",
+                mode: "embedded",
+                initialMessages: ["Hello! How can I help you today?"]
+              });
+              setIsLoading(false);
+            } else {
+              setError("Chat widget failed to initialize");
+              setIsLoading(false);
+            }
+          } catch (err) {
+            console.error("Error initializing chat:", err);
+            setError("Failed to load chat interface");
+            setIsLoading(false);
+          }
+        }, 500);
       };
+
+      script.onerror = () => {
+        setError("Failed to load chat script");
+        setIsLoading(false);
+      };
+
       document.body.appendChild(script);
       scriptLoadedRef.current = true;
     }
@@ -61,12 +85,28 @@ export const ChatRoom = () => {
         </header>
 
         {/* Chat Container */}
-        <div className="flex-1 overflow-hidden p-6 min-h-0">
+        <div className="flex-1 overflow-hidden p-6 min-h-0 flex items-center justify-center">
+          {isLoading && (
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Loading chat...</p>
+            </div>
+          )}
+          {error && (
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                <p className="text-destructive-foreground">{error}</p>
+              </div>
+            </div>
+          )}
           <div 
             id="n8n-chat" 
             ref={chatContainerRef}
-            className="w-full h-full rounded-xl"
-            style={{ minHeight: '500px' }}
+            className="w-full h-full"
+            style={{ 
+              minHeight: '500px',
+              display: isLoading || error ? 'none' : 'block'
+            }}
           />
         </div>
       </div>
