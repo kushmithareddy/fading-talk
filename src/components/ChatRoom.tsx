@@ -61,11 +61,12 @@ export const ChatRoom = () => {
         </header>
 
         {/* Chat Container */}
-        <div className="flex-1 overflow-hidden p-6">
+        <div className="flex-1 overflow-hidden p-6 min-h-0">
           <div 
             id="n8n-chat" 
             ref={chatContainerRef}
-            className="w-full h-full rounded-xl overflow-hidden"
+            className="w-full h-full rounded-xl"
+            style={{ minHeight: '500px' }}
           />
         </div>
       </div>
